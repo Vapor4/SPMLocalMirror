@@ -7,22 +7,10 @@
 
 import Foundation
 
-//            guard let _ = URL(string: resutString) else {
-//                throw MirrorError.systemError
-//            }
-//            if !packages.contains(resutString) {
-//                packages.append(resutString)
-//            }
-//
-//            let list = resutString.components(separatedBy: "/")
-//            let count = list.count
-//            let groupName = "\(list[count - 2])/\(list[count - 1])"
-//            let packagePath = "https://raw.githubusercontent.com/\(groupName)/master/Package.swift"
-//            let result = try loadPackageSwift(packagePath)
-//            try parsePackageContent(result, &packages)
+
 
 struct PackageManager {
-    func loadContent(_ s:String) throws -> String? {
+    func loadContent(_ s:String) throws -> String {
         let url:URL
         if s.contains("http") {
             guard let _url = URL(string: s) else {
@@ -39,34 +27,36 @@ struct PackageManager {
         }
         return _result
     }
-    func parsePackageContent(_ content:String) throws -> [String] {
-        var contentPackages:[String] = []
-        let regx = #".package\(url:[ "\w:\/.-]*"#
-        let reg = try? NSRegularExpression(pattern: regx, options: [])
-        guard let results:[NSTextCheckingResult] = reg?.matches(in: content, options: [], range: NSRange(content.startIndex..., in: content)) else {
-            throw MirrorError.systemError
+    
+    func appenURLInDependencies(_ content:String) throws {
+        let dependenciesManager = DependenciesManager(content: content)
+        let contents = try dependenciesManager.contents()
+        for content in contents {
+            if !isExitDependencies(content) {
+                dependencies.append(content)
+            }
+            if let _ = content.requirement {
+                var url = content.url
+                print(url)
+                if let range = url.range(of: ".git") {
+                    url = String(url[url.startIndex..<range.lowerBound])
+                }
+                let subPaths = url.components(separatedBy: "/")
+                let name = "\(subPaths[subPaths.count - 2])/\(subPaths[subPaths.count - 1])"
+                let subPackageURL = "https://raw.githubusercontent.com/\(name)/master/Package.swift"
+                print(subPackageURL)
+                let subContent = try loadContent(subPackageURL)
+                try appenURLInDependencies(subContent)
+            }
         }
-        for result in results {
-            let contentString:NSString = content as NSString
-            let resutString = contentString.substring(with: result.range)
-            contentPackages.append(try parseRegURL(resutString))
-        }
-        return contentPackages
     }
     
-    func parseRegURL(_ url:String) throws -> String {
-        let regx = #"http[\w:\/]*.[\w\/-]*"#
-        let reg = try? NSRegularExpression(pattern: regx, options: [])
-        guard let results:[NSTextCheckingResult] = reg?.matches(in: url, options: [], range: NSRange(url.startIndex..., in: url)) else {
-            throw MirrorError.systemError
+    func isExitDependencies(_ content:DependenciesManager.Content) -> Bool {
+        for c in dependencies {
+            if c.url == content.url {
+                return true
+            }
         }
-        guard let first = results.first else {
-            throw MirrorError.systemError
-        }
-        let contentString:NSString = url as NSString
-        let resutString = contentString.substring(with: first.range)
-        return resutString
+        return false
     }
-    
-    func append
 }

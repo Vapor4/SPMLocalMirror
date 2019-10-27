@@ -21,4 +21,4 @@ func localMirrorPath() throws -> String {
     #endif
 }
 
-let dependencies:[String] = []
+var dependencies:[DependenciesManager.Content] = []
