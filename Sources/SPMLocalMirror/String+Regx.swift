@@ -11,8 +11,8 @@ import Foundation
  .package(url: "https://github.com/apple/swift-nio-http2.git", from: "1.0.0")
  */
 extension String {
-    func regMatches(_ pattern:String) throws -> [String] {
-        var matcheResults:[String] = []
+    func regMatches(_ pattern:String) throws -> [(content:String, range:NSRange)] {
+        var matcheResults:[(String,NSRange)] = []
         let regularExpression = try? NSRegularExpression(pattern: pattern, options: [])
         guard let results:[NSTextCheckingResult] = regularExpression?.matches(in: self, options: [], range: NSRange(self.startIndex..., in: self)) else {
             throw MirrorError.systemError
@@ -20,7 +20,7 @@ extension String {
         for result in results {
             let contentString:NSString = self as NSString
             let resutString = contentString.substring(with: result.range)
-            matcheResults.append(resutString)
+            matcheResults.append((resutString, result.range))
         }
         return matcheResults
     }
@@ -31,6 +31,19 @@ extension String {
         guard let results = try? self.regMatches(#"[\w:\/.-]*"#) else {
             return self
         }
-        return results[1]
+        return results[1].content
+    }
+    func groupName() -> String {
+        let subPaths = self.groupItems()
+        let name = "\(subPaths[subPaths.count - 2])/\(subPaths[subPaths.count - 1])"
+        return name
+    }
+    func groupItems() -> [String] {
+        var url = self
+        if let range = url.range(of: ".git") {
+            url = String(url[url.startIndex..<range.lowerBound])
+        }
+        let subPaths = url.components(separatedBy: "/")
+        return subPaths
     }
 }

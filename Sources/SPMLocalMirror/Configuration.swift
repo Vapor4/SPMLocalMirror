@@ -11,11 +11,11 @@ public enum MirrorError : Error {
     case systemError
 }
 
-func localMirrorPath() throws -> String {
+func localMirrorPath(_ user:String) throws -> String {
     #if os(macOS)
-    return "/Users/$USER"
+    return "/Users/\(user)"
     #elseif os(Linux)
-    return "/home/$USER"
+    return "/home/\(user)"
     #else
     throw MirrorError.systemError
     #endif

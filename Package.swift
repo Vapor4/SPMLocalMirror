@@ -2,14 +2,14 @@
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
-let localMirrorPath = "~/SPMLocalMirror"
+let localMirrorPath = "https://github.com"
 let package = Package(
     name: "SPMLocalMirror",
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(path: "\(localMirrorPath)/kylef/Commander"),
-        .package(path: "\(localMirrorPath)/kareman/SwiftShell"),
+        .package(url: "\(localMirrorPath)/kylef/Commander", from: "0.9.1"),
+        .package(url: "\(localMirrorPath)/kareman/SwiftShell", from:"5.0.1"),
         
     ],
     targets: [
