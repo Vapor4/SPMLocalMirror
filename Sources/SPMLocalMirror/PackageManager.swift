@@ -8,7 +8,6 @@
 import Foundation
 import SwiftShell
 
-var localMirrorPath:[String] = []
 struct PackageManager {
     func loadContent(_ s:String) throws -> String {
         print("\n\n\(s)")
@@ -54,16 +53,18 @@ struct PackageManager {
         return false
     }
     
-    func changeLocalPackage(_ rootPath:String ,_ packageDirectory:String) throws {
+    func changeLocalPackage(_ rootPath:String ,_ packageDirectory:String, _ isRoot:Bool = true) throws {
         let cachePath = "\(rootPath)/Cache"
         let packagePath = "\(packageDirectory)/Package.swift"
         let packageContent = try loadContent(packagePath)
-        try packageContent.write(toFile: "\(packageDirectory)/Package.mirror", atomically: true, encoding: String.Encoding.utf8)
         var newContent = packageContent as NSString
         while true {
             /// 获取当前还存在的依赖
             let manager = DependenciesManager(content: newContent as String)
-            let contents:[DependenciesManager.Content] = try manager.contents()
+            var contents:[DependenciesManager.Content] = dependencies
+            if !isRoot {
+                contents = try manager.contents()
+            }
             guard let content = findNetworkContent(contents) else {
                 break
             }
@@ -121,9 +122,11 @@ struct PackageManager {
                 break
             }
             let localPath = ".package(path: \"\(cachePath)/\(groupName)/\(coName)\")"
-            print(localPath)
-            localMirrorPath.append(localPath)
-            newContent = newContent.replacingCharacters(in: content.range, with: localPath) as NSString
+            if isRoot {
+                newContent = newContent.replacingCharacters(in: content.range, with: localPath) as NSString
+            } else {
+                newContent = newContent.replacingCharacters(in: content.range, with: "") as NSString
+            }
             main.currentdirectory = itemPath
             let coNamePath = "\(itemPath)/\(coName)"
             if !FileManager.default.fileExists(atPath: coNamePath) {
@@ -132,7 +135,7 @@ struct PackageManager {
                 main.currentdirectory = coNamePath
                 try runAndPrint("git", "checkout", "-b", coName, coName)
             }
-            try changeLocalPackage(rootPath, coNamePath)
+            try changeLocalPackage(rootPath, coNamePath, false)
         }
         try newContent.write(toFile: "\(packageDirectory)/Package.swift", atomically: true, encoding: String.Encoding.utf8.rawValue)
     }

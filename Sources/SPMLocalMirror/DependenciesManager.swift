@@ -11,7 +11,7 @@ struct DependenciesManager {
     
     // .package(url: "https://github.com/apple/swift-nio-http2.git", from: "1.0.0")
     func versions() throws -> [Content] {
-        return try subContents(#"\.package\([\w: "\/.\-,]*from:[ "\w0-9.-]*\)"#) { result in
+        return try subContents(#"\.package\([\w: "\/.\-,]*from:[ "\w0-9.-]*\)[,]*"#) { result in
             guard let results = try? result.0.regMatches(#""[\w~:\/\-.]*""#) else {
                 return nil
             }
@@ -25,7 +25,7 @@ struct DependenciesManager {
     
     // .package(path: "~/apple/swift-nio-http2")
     func paths() throws -> [Content] {
-        return try subContents(#"\.package\(path:[ \w"\/-]*\)"#) { result in
+        return try subContents(#"\.package\(path:[ \w"\/-]*\)[,]*"#) { result in
             guard let results = try? result.0.regMatches(#""[\w~:\/\-.]*""#) else {
                 return nil
             }
@@ -38,7 +38,7 @@ struct DependenciesManager {
     }
     // .package(url: "https://github.com/apple/swift-nio-http2.git", "1.0.0"..<"1.6.1")
     func ranges() throws -> [Content] {
-        return try subContents(#"\.package\(url:[\w ":\/\.\-,]*\.\.<"[0-9\.]*"\)"#) { result in
+        return try subContents(#"\.package\(url:[\w ":\/\.\-,]*\.\.<"[0-9\.]*"\)[,]*"#) { result in
             guard let results = try? result.0.regMatches(#""[\w~:\/\-.]*""#) else {
                 return nil
             }
@@ -52,7 +52,7 @@ struct DependenciesManager {
     
     // .package(url: "https://github.com/apple/swift-nio-http2.git", "1.0.0"..."1.6.1")
     func closeRange() throws -> [Content] {
-        return try subContents(#"\.package\(url:[\w ":\/\.\-,]*\.\.\."[0-9\.]*"\)"#) { result in
+        return try subContents(#"\.package\(url:[\w ":\/\.\-,]*\.\.\."[0-9\.]*"\)[,]*"#) { result in
             guard let results = try? result.0.regMatches(#""[\w~:\/\-.]*""#) else {
                 return nil
             }
@@ -66,7 +66,7 @@ struct DependenciesManager {
     
     // .package(url: "https://github.com/apple/swift-nio-http2.git", .exact("1.0.0"))
     func exacts() throws -> [Content] {
-        return try subContents(#"\.package\(url:[ ]*"[\w:\/.-]*",[ ]*.exact\("[0-9.]*"\)\)"#) { result in
+        return try subContents(#"\.package\(url:[ ]*"[\w:\/.-]*",[ ]*.exact\("[0-9.]*"\)\)[,]*"#) { result in
             guard let results = try? result.0.regMatches(#""[\w~:\/\-.]*""#) else {
                 return nil
             }
@@ -79,7 +79,7 @@ struct DependenciesManager {
     }
     // .package(url: "https://github.com/apple/swift-nio-http2.git", .branch("master"))
     func branchs() throws -> [Content] {
-        return try subContents(#"\.package\(url:[ ]*"[\w:\/.-]*",[ ]*.branch\("[\w]*"\)\)"#) { result in
+        return try subContents(#"\.package\(url:[ ]*"[\w:\/.-]*",[ ]*.branch\("[\w]*"\)\)[,]*"#) { result in
             guard let results = try? result.0.regMatches(#""[\w~:\/\-.]*""#) else {
                 return nil
             }
@@ -92,7 +92,7 @@ struct DependenciesManager {
     }
     // .package(url: "https://github.com/apple/swift-nio-http2.git", .revision("a92923b"))
     func revision() throws -> [Content] {
-        return try subContents(#"\.package\(url:[ ]*"[\w:\/.-]*",[ ]*.revision\("[\w]*"\)\)"#) { result in
+        return try subContents(#"\.package\(url:[ ]*"[\w:\/.-]*",[ ]*.revision\("[\w]*"\)\)[,]*"#) { result in
             guard let results = try? result.0.regMatches(#""[\w~:\/\-.]*""#) else {
                 return nil
             }

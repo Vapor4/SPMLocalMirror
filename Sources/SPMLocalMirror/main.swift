@@ -6,13 +6,14 @@ import SwiftShell
 Group { (g) in
     g.command(
         "local",
-        Argument<String>("package", description: "请输入本地Package.swift所在的路径地址")
-    ) { package in
-        if package.contains("http") {
-            print("🔴 只支持本地的路径")
+        Argument<[String]>("Swift Pakckage Manager Commands", description: "Swift Pakcage Manager命令")
+    ) { commands in
+        guard let pwd = CustomContext(main).env["PWD"] else {
+            print("‼️PWD获取当前路径错误")
             return
         }
-        let packagePath = "\(package)/Package.swift"
+        
+        let packagePath = "\(pwd)/Package.swift"
         let packageManager = PackageManager()
         let content = try packageManager.loadContent(packagePath)
         try packageManager.appenURLInDependencies(content)
@@ -55,7 +56,9 @@ Group { (g) in
             }
             
         }
-        try packageManager.changeLocalPackage(localPath, package)
+        try packageManager.changeLocalPackage(localPath, pwd)
+        try runAndPrint(bash: commands.joined(separator: " "))
+        try content.write(toFile: "\(pwd)/Package.swift", atomically: true, encoding: String.Encoding.utf8)
     }
 }.run()
 
