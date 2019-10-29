@@ -1,13 +1,23 @@
-REFIX?=/usr/local
-PROD_NAME=SPMLocalMirror
-PROD_NAME_HOMEBREW=SPMLocalMirror
+prefix ?= /usr/local
+bindir = $(prefix)/bin
+libdir = $(prefix)/lib
 
 build:
-	swift build -c release
-build-for-linux:
-	swift build -c release
+	swift build -c release --disable-sandbox
+
 install: build
-	mkdir -p "$(PREFIX)/bin"
-	cp -f ".build/release/SPMLocalMirror" "$(PREFIX)/bin/SPMLocalMirror"
-run:
-	.build/release/$(PROD_NAME)
+	install ".build/release/SPMLocalMirror" "$(bindir)"
+	install ".build/release/libswiftCore.dylib" "$(libdir)"
+	install_name_tool -change \
+		".build/x86_64-apple-macosx10.10/release/libswiftCore.dylib" \
+		"$(libdir)/libswiftCore.dylib" \
+		"$(bindir)/SPMLocalMirror"
+
+uninstall:
+	rm -rf "$(bindir)/SPMLocalMirror"
+	rm -rf "$(libdir)/libswiftCore.dylib"
+
+clean:
+	rm -rf .build
+
+.PHONY: build install uninstall clean
