@@ -10,4 +10,4 @@ install: build
 	mkdir -p "$(PREFIX)/bin"
 	cp -f ".build/release/SPMLocalMirror" "$(PREFIX)/bin/SPMLocalMirror"
 run:
-.build/release/$(PROD_NAME)
+	.build/release/$(PROD_NAME)
