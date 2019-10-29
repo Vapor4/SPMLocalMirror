@@ -12,7 +12,7 @@ struct PackageManager {
     func loadContent(_ s:String) throws -> String {
         print("\n\n\(s)")
         let url:URL
-        if try s.regMatches(#"http[s]*:"#).count > 0 {
+        if try isURLDependencies(s) {
             guard let _url = URL(string: s) else {
                 throw MirrorError.systemError
             }
@@ -26,6 +26,10 @@ struct PackageManager {
             throw MirrorError.systemError
         }
         return _result
+    }
+    
+    func isURLDependencies(_ s:String) throws -> Bool {
+        return try s.regMatches(#"http[s]*:"#).count > 0
     }
     
     func appenURLInDependencies(_ content:String) throws {
@@ -53,100 +57,124 @@ struct PackageManager {
         return false
     }
     
-    func changeLocalPackage(_ rootPath:String ,_ packageDirectory:String, _ isRoot:Bool = true) throws {
+    func changeLocalPackage(_ rootPath:String ,_ packageDirectory:String) throws {
+        // 获取缓存的目录
         let cachePath = "\(rootPath)/Cache"
-        let packagePath = "\(packageDirectory)/Package.swift"
+        // 获取依赖的Package.swift文件路径
+        var packagePath = "\(packageDirectory)/Package.swift"
+        let mirrorPath = "\(packageDirectory)/Package.mirror"
+        let isExitMirror = FileManager.default.fileExists(atPath: mirrorPath)
+        if isExitMirror {
+            packagePath = mirrorPath
+        }
+        // 加载Package.swift文件内容
         let packageContent = try loadContent(packagePath)
-        var newContent = packageContent as NSString
-        while true {
-            /// 获取当前还存在的依赖
-            let manager = DependenciesManager(content: newContent as String)
-            var contents:[DependenciesManager.Content] = dependencies
-            if !isRoot {
-                contents = try manager.contents()
-            }
-            guard let content = findNetworkContent(contents) else {
-                break
-            }
-            // .package(path: "~/apple/swift-nio-http2")
-            let items = content.url.groupItems()
-            let groupName = content.url.groupName()
-            let groupPath = "\(cachePath)/\(items[items.count - 2])"
-            ShellCommand.createDirectory(path: groupPath)
-            let itemPath = "\(groupPath)/\(items[items.count - 1])"
-            ShellCommand.createDirectory(path: itemPath)
-            guard let req = content.requirement else {
-                break
-            }
-            let coName:String
-            let clonePath = "\(rootPath)/Source/\(groupName)"
-            main.currentdirectory = clonePath
-            let tagOutput = run("git", "tag")
-            let tags = tagOutput.stdout.components(separatedBy: "\n")
-            switch req {
-            case .from(let f):
-                var _tempTag = ""
-                for tag in tags {
-                    if tag > _tempTag && tag >= f {
-                        _tempTag = tag
-                    }
-                }
-                coName = _tempTag
-                break
-            case .range(let r):
-                var _tempTag = ""
-                for tag in tags {
-                    if tag > _tempTag && tag >= r.major && tag < r.minor {
-                        _tempTag = tag
-                    }
-                }
-                coName = _tempTag
-                break
-            case .closeRanage(let r):
-                var _tempTag = ""
-                for tag in tags {
-                    if tag > _tempTag && tag >= r.major && tag <= r.minor {
-                        _tempTag = tag
-                    }
-                }
-                coName = _tempTag
-                break
-            case .exact(let e):
-                coName = e
-                break
-            case .branch(let b):
-                coName = b
-                break
-            case .revision(let r):
-                coName = r
-                break
-            }
-            let localPath = ".package(path: \"\(cachePath)/\(groupName)/\(coName)\")"
-            if isRoot {
-                newContent = newContent.replacingCharacters(in: content.range, with: localPath) as NSString
-            } else {
-                newContent = newContent.replacingCharacters(in: content.range, with: "") as NSString
-            }
-            main.currentdirectory = itemPath
-            let coNamePath = "\(itemPath)/\(coName)"
-            if !FileManager.default.fileExists(atPath: coNamePath) {
-                // git clone from local mirror
-                try runAndPrint("git", "clone", "\(rootPath)/Source/\(groupName)", coName)
-                main.currentdirectory = coNamePath
-                try runAndPrint("git", "checkout", "-b", coName, coName)
-            }
-            try changeLocalPackage(rootPath, coNamePath, false)
-        }
-        try newContent.write(toFile: "\(packageDirectory)/Package.swift", atomically: true, encoding: String.Encoding.utf8.rawValue)
-    }
-    
-    func findNetworkContent(_ contents:[DependenciesManager.Content]) -> DependenciesManager.Content? {
+        // 替换的内容
+        var replaceContent:String = """
+        [
+        """
+        let manager = DependenciesManager(content: packageContent)
+        // 默认是拿到所有的依赖
+        let contents:[DependenciesManager.Content] = try manager.contents()
         for content in contents {
-            if content.url.contains("http") {
-                return content
+            // 是否是网络依赖
+            let isURLDependencies = try self.isURLDependencies(content.url)
+            if  !isURLDependencies {
+                // 如果是本地的依赖
+                replaceContent += """
+                
+                        .package(path: "\(content.url)"),
+                """
+            } else {
+                let items = content.url.groupItems()
+                let groupName = content.url.groupName()
+                let groupPath = "\(cachePath)/\(items[items.count - 2])"
+                ShellCommand.createDirectory(path: groupPath)
+                let itemPath = "\(groupPath)/\(items[items.count - 1])"
+                ShellCommand.createDirectory(path: itemPath)
+                // 如果是我们不支持的类型 则放弃
+                guard let req = content.requirement else {
+                    break
+                }
+                // Checkout 下来的名称
+                let checkOutName:String
+                // Clone源的路径地址
+                let clonePath = "\(rootPath)/Source/\(groupName)"
+                main.currentdirectory = clonePath
+                // 获取所有的源支持的Tag
+                let tagOutput = run("git", "tag")
+                let tags = tagOutput.stdout.components(separatedBy: "\n")
+                switch req {
+                case .from(let f):
+                    var _tempTag = ""
+                    for tag in tags {
+                        if tag > _tempTag && tag >= f {
+                            _tempTag = tag
+                        }
+                    }
+                    checkOutName = _tempTag
+                    break
+                case .range(let r):
+                    var _tempTag = ""
+                    for tag in tags {
+                        if tag > _tempTag && tag >= r.major && tag < r.minor {
+                            _tempTag = tag
+                        }
+                    }
+                    checkOutName = _tempTag
+                    break
+                case .closeRanage(let r):
+                    var _tempTag = ""
+                    for tag in tags {
+                        if tag > _tempTag && tag >= r.major && tag <= r.minor {
+                            _tempTag = tag
+                        }
+                    }
+                    checkOutName = _tempTag
+                    break
+                case .exact(let e):
+                    checkOutName = e
+                    break
+                case .branch(let b):
+                    checkOutName = b
+                    break
+                case .revision(let r):
+                    checkOutName = r
+                    break
+                }
+                // 需要替换的本地路径
+                let localPath = "\(cachePath)/\(groupName)/\(checkOutName)"
+                replaceContent += """
+                
+                        .package(path: "\(localPath)"),
+                """
+                main.currentdirectory = itemPath
+                let coNamePath = "\(itemPath)/\(checkOutName)"
+                if !FileManager.default.fileExists(atPath: coNamePath) {
+                    // git clone from local mirror
+                    try runAndPrint("git", "clone", "\(rootPath)/Source/\(groupName)", checkOutName)
+                    main.currentdirectory = coNamePath
+                    // 切换对应的分支 或者 tag或者节点
+                    try runAndPrint("git", "checkout", "-b", checkOutName, checkOutName)
+                }
+                try changeLocalPackage(rootPath, coNamePath)
             }
         }
-        return nil;
+        // 如果是主依赖 则添加闭标签]
+        replaceContent += """
+        
+                ]
+        """
+        // 查找依赖的内容
+        guard let range = try packageContent.findPackageDependenciesRange() else {
+            return
+        }
+        var newPackageContent = packageContent as NSString
+        newPackageContent = newPackageContent.replacingCharacters(in: range, with: replaceContent) as NSString
+        try newPackageContent.write(toFile: "\(packageDirectory)/Package.swift", atomically: true, encoding: String.Encoding.utf8.rawValue)
+        if !isExitMirror {
+            try packageContent.write(toFile: "\(packageDirectory)/Package.mirror", atomically: true, encoding: String.Encoding.utf8)
+        }
     }
-    
+
 }

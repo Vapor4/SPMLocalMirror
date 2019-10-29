@@ -47,3 +47,22 @@ extension String {
         return subPaths
     }
 }
+
+extension String {
+    func findPackageDependenciesRange() throws -> NSRange? {
+        let results = try self.regMatches(#"[ ]*\[[^\]]*\]"#)
+        for result in results {
+            if result.content.contains(".package") {
+                return result.range
+            }
+        }
+        return nil
+    }
+}
+
+extension String {
+    /// 是否是网络源依赖
+    func isURLDependencies() throws -> Bool {
+        return try self.regMatches(#"http[s]*:"#).count > 0
+    }
+}
