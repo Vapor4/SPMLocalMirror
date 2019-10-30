@@ -4,6 +4,11 @@
 
 > 原理是下载网络依赖到本地 使用本地依赖加速
 
+## Install
+```
+brew install vapor4/homebrew-taps/spmlocalmirror
+```
+
 ## 使用
 
 ```shell
