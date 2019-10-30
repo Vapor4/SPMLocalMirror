@@ -90,8 +90,6 @@ struct PackageManager {
                 let groupName = content.url.groupName()
                 let groupPath = "\(cachePath)/\(items[items.count - 2])"
                 ShellCommand.createDirectory(path: groupPath)
-                let itemPath = "\(groupPath)/\(items[items.count - 1])"
-                ShellCommand.createDirectory(path: itemPath)
                 // 如果是我们不支持的类型 则放弃
                 guard let req = content.requirement else {
                     break
@@ -143,16 +141,16 @@ struct PackageManager {
                     break
                 }
                 // 需要替换的本地路径
-                let localPath = "\(cachePath)/\(groupName)/\(checkOutName)"
+                let localPath = "\(cachePath)/\(groupName)"
                 replaceContent += """
                 
                         .package(path: "\(localPath)"),
                 """
-                main.currentdirectory = itemPath
-                let coNamePath = "\(itemPath)/\(checkOutName)"
+                main.currentdirectory = groupPath
+                let coNamePath = "\(groupPath)/\(items[items.count - 1])"
                 if !FileManager.default.fileExists(atPath: coNamePath) {
                     // git clone from local mirror
-                    try runAndPrint("git", "clone", "\(rootPath)/Source/\(groupName)", checkOutName)
+                    try runAndPrint("git", "clone", "\(rootPath)/Source/\(groupName)", items[items.count - 1])
                     main.currentdirectory = coNamePath
                     // 切换对应的分支 或者 tag或者节点
                     try runAndPrint("git", "checkout", "-b", checkOutName, checkOutName)
