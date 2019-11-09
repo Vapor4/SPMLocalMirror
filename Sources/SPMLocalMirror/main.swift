@@ -24,11 +24,6 @@ Group { (g) in
         if isExitMirror {
             packagePath = mirrorPath
         }
-        let packageManager = PackageManager()
-        // 获取Package.swift内容
-        let content = try packageManager.loadContent(packagePath)
-        // 查询所有的依赖
-        try packageManager.appenURLInDependencies(content)
         // 查询当前用户名称
         guard let user = ShellCommand.getUser() else {
             print("‼️查询不到用户信息")
@@ -48,8 +43,14 @@ Group { (g) in
         let sourcePath = "\(localPath)/Source"
         ShellCommand.createDirectory(path: sourcePath)
         
+        let packageManager = PackageManager()
+        // 获取Package.swift内容
+        let content = try packageManager.loadContent(packagePath)
+        // 查询所有的依赖
+        try packageManager.appenURLInDependencies(content, cachePath)
+        
         for content in dependencies {
-            let isURLDependencies = try content.url.isURLDependencies()
+            let isURLDependencies = content.requirement != nil
             if !isURLDependencies {
                 // 如果就是本地的依赖 则不需要任何的操作
                 continue
