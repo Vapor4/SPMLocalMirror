@@ -10,6 +10,7 @@ import SwiftShell
 
 struct PackageManager {
     func loadContent(_ s:String) throws -> String {
+        print("正在分析依赖：\(s)")
         let url:URL
         if try isURLDependencies(s) {
             guard let _url = URL(string: s) else {
@@ -35,6 +36,7 @@ struct PackageManager {
         let dependenciesManager = DependenciesManager(content: content)
         let contents = try dependenciesManager.contents(cachePath)
         for content in contents {
+            print("依赖: \(content.url)")
             if !isExitDependencies(content) {
                 dependencies.append(content)
             }
@@ -59,6 +61,7 @@ struct PackageManager {
     func changeLocalPackage(_ rootPath:String ,_ packageDirectory:String) throws {
         // 获取缓存的目录
         let cachePath = "\(rootPath)/Cache"
+        let sourcePath = "\(rootPath)/Source"
         // 获取依赖的Package.swift文件路径
         var packagePath = "\(packageDirectory)/Package.swift"
         let mirrorPath = "\(packageDirectory)/Package.mirror"
@@ -79,7 +82,9 @@ struct PackageManager {
             let items = content.url.groupItems()
             let groupName = content.url.groupName()
             let groupPath = "\(cachePath)/\(items[items.count - 2])"
+            let sourceGroupPath = "\(sourcePath)/\(items[items.count - 2])"
             ShellCommand.createDirectory(path: groupPath)
+            ShellCommand.createDirectory(path: sourceGroupPath)
             // 如果是我们不支持的类型 则放弃
             guard let req = content.requirement else {
                 replaceContent += """
@@ -92,6 +97,12 @@ struct PackageManager {
             let checkOutName:String
             // Clone源的路径地址
             let clonePath = "\(rootPath)/Source/\(groupName)"
+            if !FileManager.default.fileExists(atPath: clonePath) {
+                print("\(clonePath)不存在")
+                // 如果不存在
+                main.currentdirectory = sourceGroupPath
+                try runAndPrint("git", "clone", content.url)
+            }
             main.currentdirectory = clonePath
             // 获取所有的源支持的Tag
             let tagOutput = run("git", "tag")
@@ -148,7 +159,6 @@ struct PackageManager {
            let content = "// swift-tools-version:5.1"
            newPackageContent = newPackageContent.replacingCharacters(in: results[0].range, with: content) as NSString
         }
-        print(newPackageContent)
         try newPackageContent.write(toFile: "\(packageDirectory)/Package.swift", atomically: true, encoding: String.Encoding.utf8.rawValue)
         if !isExitMirror {
             try packageContent.write(toFile: "\(packageDirectory)/Package.mirror", atomically: true, encoding: String.Encoding.utf8)
