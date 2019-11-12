@@ -44,37 +44,37 @@ Group { (g) in
         ShellCommand.createDirectory(path: sourcePath)
         
         let packageManager = PackageManager()
-        // 获取Package.swift内容
+//        // 获取Package.swift内容
         let content = try packageManager.loadContent(packagePath)
-        // 查询所有的依赖
-        try packageManager.appenURLInDependencies(content, cachePath)
-        
-        for content in dependencies {
-            let isURLDependencies = content.requirement != nil
-            if !isURLDependencies {
-                // 如果就是本地的依赖 则不需要任何的操作
-                continue
-            }
-            // 设置当前终端的目录为源目录
-            main.currentdirectory = sourcePath
-            let groupItems = content.url.groupItems()
-            // 用户名或者组织
-            let groupPath = "\(sourcePath)/\(groupItems[groupItems.count - 2])"
-            ShellCommand.createDirectory(path: groupPath)
-            // 源的名称
-            let itemPath = "\(groupPath)/\(groupItems[groupItems.count - 1])"
-            // 是否存在依赖源 如果不存在就clone 否则就更新
-            if !FileManager.default.fileExists(atPath: itemPath, isDirectory: nil) {
-                // 没有存在 就 git clone
-                main.currentdirectory = groupPath
-                try runAndPrint("git", "clone", content.url)
-            } else {
-                // 存在就 git pull
-                main.currentdirectory = itemPath
-                try runAndPrint("git", "pull")
-            }
-            
-        }
+//        // 查询所有的依赖
+//        try packageManager.appenURLInDependencies(content, cachePath)
+//
+//        for content in dependencies {
+//            let isURLDependencies = content.requirement != nil
+//            if !isURLDependencies {
+//                // 如果就是本地的依赖 则不需要任何的操作
+//                continue
+//            }
+//            // 设置当前终端的目录为源目录
+//            main.currentdirectory = sourcePath
+//            let groupItems = content.url.groupItems()
+//            // 用户名或者组织
+//            let groupPath = "\(sourcePath)/\(groupItems[groupItems.count - 2])"
+//            ShellCommand.createDirectory(path: groupPath)
+//            // 源的名称
+//            let itemPath = "\(groupPath)/\(groupItems[groupItems.count - 1])"
+//            // 是否存在依赖源 如果不存在就clone 否则就更新
+//            if !FileManager.default.fileExists(atPath: itemPath, isDirectory: nil) {
+//                // 没有存在 就 git clone
+//                main.currentdirectory = groupPath
+//                try runAndPrint("git", "clone", content.url)
+//            } else {
+//                // 存在就 git pull
+//                main.currentdirectory = itemPath
+//                try runAndPrint("git", "pull")
+//            }
+//
+//        }
         // 更改依赖的Package.swift的内容
         try packageManager.changeLocalPackage(localPath, pwd)
         main.currentdirectory = pwd

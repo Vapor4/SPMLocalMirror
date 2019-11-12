@@ -22,3 +22,4 @@ func localMirrorPath(_ user:String) throws -> String {
 }
 
 var dependencies:[DependenciesManager.Content] = []
+var hadPullGitPaths:[String] = []

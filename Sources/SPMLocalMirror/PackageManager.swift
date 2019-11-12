@@ -36,10 +36,11 @@ struct PackageManager {
         let dependenciesManager = DependenciesManager(content: content)
         let contents = try dependenciesManager.contents(cachePath)
         for content in contents {
-            print("依赖: \(content.url)")
-            if !isExitDependencies(content) {
-                dependencies.append(content)
+            if isExitDependencies(content) {
+                continue
             }
+            print("依赖: \(content.url)")
+            dependencies.append(content)
             if let _ = content.requirement {
                 let name = content.url.groupName()
                 let subPackageURL = "https://raw.githubusercontent.com/\(name)/master/Package.swift"
@@ -102,6 +103,10 @@ struct PackageManager {
                 // 如果不存在
                 main.currentdirectory = sourceGroupPath
                 try runAndPrint("git", "clone", content.url)
+            } else if !hadPullGitPaths.contains(clonePath) {
+                main.currentdirectory = clonePath
+                try runAndPrint("git", "pull")
+                hadPullGitPaths.append(clonePath)
             }
             main.currentdirectory = clonePath
             // 获取所有的源支持的Tag
